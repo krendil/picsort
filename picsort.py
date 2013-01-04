@@ -558,7 +558,6 @@ interface = """
               <object class="GtkEntry" id="renameField">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="invisible_char">•</property>
                 <property name="primary_icon_activatable">False</property>
                 <property name="secondary_icon_activatable">False</property>
                 <property name="primary_icon_sensitive">True</property>
@@ -632,6 +631,7 @@ class PicSort:
                 self.addNewCategory(cat)
 
             self.setFolder(data["source"])
+            self.configFile = configFile
 
     def onSaveConfig(self, widget, data=None):
         if len(self.configFile) == 0 :
@@ -651,6 +651,7 @@ class PicSort:
                 "categories" : self.categories}
         with open(configFile, "w") as outFile:
             json.dump(data, outFile)
+            self.configFile = configFile
 
     def onQuit(self, widget, data=None):
         gtk.main_quit()
