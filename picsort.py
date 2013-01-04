@@ -698,7 +698,6 @@ class PicSort:
         categoryButton.set_label("{0}. {1}".format(catNumber+1, os.path.basename(folderName)))
 
         self.placeButton(categoryButton, catNumber)
-        self.window.connect_after("key-press-event", self.onShortcutPressed)
 
     def onClearCategories(self, widget, data=None):
         self.clearCategories()
@@ -801,6 +800,7 @@ class PicSort:
         self.setFolder(os.getcwd())
         self.categories = []
         self.configFile = ""
+        self.window.connect_after("key-press-event", self.onShortcutPressed)
 
 if __name__ == "__main__":
     mainWindow = PicSort()
