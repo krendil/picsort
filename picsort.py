@@ -7,8 +7,8 @@ import gobject
 
 import json
 
-MAX_IMG_WIDTH = 400.0
-MAX_IMG_HEIGHT = 400.0
+MAX_IMG_WIDTH = 800.0
+MAX_IMG_HEIGHT = 800.0
 
 interface = """
 <?xml version="1.0" encoding="UTF-8"?>
@@ -91,11 +91,6 @@ interface = """
       <action-widget response="-1">button5</action-widget>
       <action-widget response="0">button6</action-widget>
     </action-widgets>
-  </object>
-  <object class="GtkImage" id="image3">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-open</property>
   </object>
   <object class="GtkFileChooserDialog" id="fileSaver">
     <property name="can_focus">False</property>
@@ -228,6 +223,11 @@ interface = """
       <action-widget response="-1">button2</action-widget>
       <action-widget response="0">button1</action-widget>
     </action-widgets>
+  </object>
+  <object class="GtkImage" id="image3">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-open</property>
   </object>
   <object class="GtkImage" id="nextSymbol">
     <property name="visible">True</property>
@@ -470,6 +470,7 @@ interface = """
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="image">prevSymbol</property>
+                        <accelerator key="comma" signal="clicked"/>
                         <signal name="clicked" handler="onPrevImage" swapped="no"/>
                       </object>
                       <packing>
@@ -510,6 +511,7 @@ interface = """
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="image">nextSymbol</property>
+                        <accelerator key="period" signal="clicked"/>
                         <signal name="clicked" handler="onNextImage" swapped="no"/>
                       </object>
                       <packing>
@@ -558,6 +560,7 @@ interface = """
               <object class="GtkEntry" id="renameField">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="invisible_char">•</property>
                 <property name="primary_icon_activatable">False</property>
                 <property name="secondary_icon_activatable">False</property>
                 <property name="primary_icon_sensitive">True</property>
@@ -576,6 +579,7 @@ interface = """
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <accelerator key="r" signal="clicked" modifiers="GDK_CONTROL_MASK"/>
                 <signal name="clicked" handler="onRename" swapped="no"/>
               </object>
               <packing>
@@ -591,21 +595,64 @@ interface = """
             <property name="position">3</property>
           </packing>
         </child>
+        <child>
+          <object class="GtkHBox" id="hbox4">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkButton" id="deleteButton">
+                <property name="label" translatable="yes">Delete</property>
+                <property name="use_action_appearance">False</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <accelerator key="Delete" signal="clicked"/>
+                <signal name="clicked" handler="onDelete" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="undoButton">
+                <property name="label" translatable="yes">Undo</property>
+                <property name="use_action_appearance">False</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <accelerator key="z" signal="clicked" modifiers="GDK_CONTROL_MASK"/>
+                <signal name="clicked" handler="onUndo" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">4</property>
+          </packing>
+        </child>
       </object>
     </child>
   </object>
 </interface>
 """
 
-def scaleImage(pixbuf):
-    width_ratio = MAX_IMG_WIDTH / pixbuf.get_width()
-    height_ratio = MAX_IMG_HEIGHT / pixbuf.get_height()
+def scaleImage(pixbuf, width, height):
+    width_ratio = float(width) / pixbuf.get_width()
+    height_ratio = float(height) / pixbuf.get_height()
     min_ratio = min(width_ratio, height_ratio, 1)
     pixbuf = pixbuf.scale_simple(
-        int(pixbuf.get_width() * min_ratio),
-        int(pixbuf.get_height() * min_ratio),
-        gtk.gdk.INTERP_BILINEAR
-    )
+            int(pixbuf.get_width() * min_ratio),
+            int(pixbuf.get_height() * min_ratio),
+            gtk.gdk.INTERP_BILINEAR
+            )
     return pixbuf
 
 class CategoryButton(gtk.Button):
@@ -620,6 +667,7 @@ class PicSort:
         response = loadDialog.run()
         if response == 0 :
             self.loadConfig(loadDialog.get_filename())
+            gtk.recent_manager_get_default().add_item(loadDialog.get_uri())
         loadDialog.hide()
 
     def loadConfig(self, configFile):
@@ -668,8 +716,8 @@ class PicSort:
     def setFolder(self, folder):
         self.sourceFolder = folder
         self.imageFiles = [
-            os.path.join(self.sourceFolder, path) for path in os.listdir(self.sourceFolder)
-        ]
+                os.path.join(self.sourceFolder, path) for path in os.listdir(self.sourceFolder)
+                ]
         self.currentImageIndex = 0
 
         self.showImage()
@@ -738,6 +786,7 @@ class PicSort:
         newName = os.path.join(self.categories[data], os.path.basename(oldName))
         os.rename(oldName, newName)
         del self.imageFiles[self.currentImageIndex]
+        self.lastMove = (oldName, newName)
         self.showImage()
 
     def onRename(self, widget, data=None):
@@ -775,19 +824,36 @@ class PicSort:
             except gobject.GError:
                 del self.imageFiles[self.currentImageIndex]
 
-        pixBuf = scaleImage(pixBuf)
+        actualSize = self.widgets["imagePreview"].get_allocation()
+        pixBuf = scaleImage(pixBuf, actualSize.width, actualSize.height)
         self.widgets["imagePreview"].set_from_pixbuf(pixBuf)
         self.widgets["infoLabel"].set_text( "{0} {1}/{2}".format(
             imageFile, self.currentImageIndex+1, len(self.imageFiles)
-        ))
+            ))
 
         self.widgets["renameField"].set_text(os.path.basename(imageFile))
+
+    def onImageResize(self, widget, data=None):
+        self.showImage()
 
     def saveWidgets(self, builder):
         self.widgets = {}
 
         for widget in builder.get_objects():
             self.widgets[gtk.Buildable.get_name(widget)] = widget
+
+    def onUndo(self, widget, data=None):
+        if self.lastMove:
+            os.rename(self.lastMove[1], self.lastMove[0])
+            self.imageFiles.insert(self.currentImageIndex, self.lastMove[0])
+            self.lastMove = None
+            self.showImage()
+
+    def onDelete(self, widget, data=None):
+        os.remove(self.imageFiles[self.currentImageIndex])
+        del self.imageFiles[self.currentImageIndex]
+        self.showImage()
+
 
     def __init__(self):
         builder = gtk.Builder()
@@ -801,6 +867,7 @@ class PicSort:
         self.categories = []
         self.configFile = ""
         self.window.connect_after("key-press-event", self.onShortcutPressed)
+        self.lastMove = None
 
 if __name__ == "__main__":
     mainWindow = PicSort()
